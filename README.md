@@ -17,7 +17,7 @@ HOC - это мощный инструмент для переиспользов
 
 Мы начнем с  Enhancers, так-как они наиболее просты для добавления типов. Простейшим примером этого HOC является добавление loading prop для отображения спинера если он равен true. Вот пример без типов:
 
-```php
+```js
 const withLoading = Component =>
   class WithLoading extends React.Component {
     render() {
@@ -26,3 +26,32 @@ const withLoading = Component =>
     }
   };
 ```
+
+А вот тот же код, но только с добавленными типами: 
+
+
+```ts
+interface WithLoadingProps {
+  loading: boolean;
+}
+
+const withLoading = <P extends object>(Component: React.ComponentType<P>) =>
+  class WithLoading extends React.Component<P & WithLoadingProps> {
+    render() {
+      const { loading, ...props } = this.props as WithLoadingProps;
+      return loading ? <LoadingSpinner /> : <Component {...props} />;
+    }
+  };
+
+```
+
+Давайте разберем этот пример подробнее:
+
+```ts
+interface WithLoadingProps {
+  loading: boolean;
+}
+```
+
+
+
