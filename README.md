@@ -3,7 +3,7 @@
 Компоненты высшего порядка React в TypeScript.
 -----------------------------------
 
-***https://medium.com/@jrwebdev/react-higher-order-component-patterns-in-typescript-42278f7590fb
+***Оригинал https://medium.com/@jrwebdev/react-higher-order-component-patterns-in-typescript-42278f7590fb
 
 HOC - это мощный инструмент для переиспользования кода. Однако общая проблема разработчиков использующих TS - это их типизация.
 
