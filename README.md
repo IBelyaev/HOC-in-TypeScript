@@ -92,3 +92,106 @@ const withLoading = <P extends object>(
   loading ? <LoadingSpinner /> : <Component {...props} />;
 ```
 
+### Injectors
+
+
+Injectors - это более распространенный тип HOC, но более сложный для типизации. Помимо добавления props в компонент, он также делает невозможным передачу их саружи в оборачиваемый компонент, пока он обернут в него, чтобы это было невозможно сделать из вне. Функция connect из пакета react-redux - это пример injectors HOC, но в этой статье будет рассмотрен более простой вариант, а именно HOC который будет передавать значения счетчика и две функции для его увеличения и уменьшения. 
+
+
+```ts
+import { Subtract } from 'utility-types';
+
+export interface InjectedCounterProps {
+  value: number;
+  onIncrement(): void;
+  onDecrement(): void;
+}
+
+interface MakeCounterState {
+  value: number;
+}
+
+const makeCounter = <P extends InjectedCounterProps>(
+  Component: React.ComponentType<P>
+) =>
+  class MakeCounter extends React.Component<
+    Subtract<P, InjectedCounterProps>,
+    MakeCounterState
+  > {
+    state: MakeCounterState = {
+      value: 0,
+    };
+
+    increment = () => {
+      this.setState(prevState => ({
+        value: prevState.value + 1,
+      }));
+    };
+
+    decrement = () => {
+      this.setState(prevState => ({
+        value: prevState.value - 1,
+      }));
+    };
+
+    render() {
+      return (
+        <Component
+          {...this.props}
+          value={this.state.value}
+          onIncrement={this.increment}
+          onDecrement={this.decrement}
+        />
+      );
+    }
+  };
+  
+  Здесь есть несколько ключевых отличий от прошлого примера:
+  
+  ```ts
+  export interface InjectedCounterProps {  
+  value: number;  
+  onIncrement(): void;  
+  onDecrement(): void;
+}
+```
+
+Объявляется интерфейс для props которые будут переданы в компонент с возможностью его экспортировать, чтобы  применить в компоненте.
+
+```ts
+
+import makeCounter, { InjectedCounterProps } from './makeCounter';
+
+interface CounterProps extends InjectedCounterProps {
+  style?: React.CSSProperties;
+}
+
+const Counter = (props: CounterProps) => (
+  <div style={props.style}>
+    <button onClick={props.onDecrement}> - </button>
+    {props.value}
+    <button onClick={props.onIncrement}> + </button>
+  </div>
+);
+
+export default makeCounter(Counter);
+```
+
+```ts
+<P extends InjectedCounterProps>(Component: React.ComponentType<P>)
+```
+
+Опять используется дженерик, но на этот раз он гарантирует, что компонент переданный в HOC включает в себя props передаваемые самим HOC(ом), в противном случае вы получите ошибку компиляции TS.
+
+```ts
+class MakeCounter extends React.Component<
+  Subtract<P, InjectedCounterProps>,    
+  MakeCounterState  
+>
+```
+
+Компонент возвращаемый HOC(ом) использует Subtract от Piotrek Witek’s который можно импортировать из  utility-types, который уберет из типов передаваемых props типы для state самого HOC(а), это сделано для того, чтобы не было возможности изменить состояние компонента извне. При попытке пробросить prop value в компонент  MakeCounter получиться ошибка компиляции.
+
+В большинстве случаев это поведение ожидается от Injector(а), но это позже будет обсуждаться в этой статье.
+
+### Enhance + Inject
