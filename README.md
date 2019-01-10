@@ -3,6 +3,8 @@
 Компоненты высшего порядка React в TypeScript.
 -----------------------------------
 
+***https://medium.com/@jrwebdev/react-higher-order-component-patterns-in-typescript-42278f7590fb
+
 HOC - это мощный инструмент для переиспользования кода. Однако общая проблема разработчиков использующих TS - это их типизация.
 
 Эта статья предполагает понимание HOC(ов), ниже будут представлены примеры возрастающей сложности, на которых будет показано, как их типизировать без использования any. В этой статье компоненты высшего порядка будут условно разделены на два типа: Enhancers и Injectors.
@@ -195,3 +197,82 @@ class MakeCounter extends React.Component<
 В большинстве случаев это поведение ожидается от Injector(а), но это позже будет обсуждаться в этой статье.
 
 ### Enhance + Inject
+
+Следующий пример - это комбинирование двух этих типов HOC(ов). В этом примере, мы усовершенствуем пример со счетчиком, который был описан выше. В новой реализации в него можно будет передавать два параметра: minValue, maxValue, но он в свою очередь не будет передавать их в компонент. 
+
+```ts
+export interface InjectedCounterProps {
+  value: number;
+  onIncrement(): void;
+  onDecrement(): void;
+}
+
+interface MakeCounterProps {
+  minValue?: number;
+  maxValue?: number;
+}
+
+interface MakeCounterState {
+  value: number;
+}
+
+const makeCounter = <P extends InjectedCounterProps>(
+  Component: React.ComponentType<P>
+) =>
+  class MakeCounter extends React.Component<
+    Subtract<P, InjectedCounterProps> & MakeCounterProps,
+    MakeCounterState
+  > {
+    state: MakeCounterState = {
+      value: 0,
+    };
+
+    increment = () => {
+      this.setState(prevState => ({
+        value:
+          prevState.value === this.props.maxValue
+            ? prevState.value
+            : prevState.value + 1,
+      }));
+    };
+
+    decrement = () => {
+      this.setState(prevState => ({
+        value:
+          prevState.value === this.props.minValue
+            ? prevState.value
+            : prevState.value - 1,
+      }));
+    };
+
+    render() {
+      const { minValue, maxValue, ...props } = this.props as MakeCounterProps;
+      return (
+        <Component
+          {...props}
+          value={this.state.value}
+          onIncrement={this.increment}
+          onDecrement={this.decrement}
+        />
+      );
+    }
+  };
+```
+
+Здесь Subtract убирает из типов оборачиваемого компонента, те которые будут проброшены HOC(ом), они будут использоваться для типизации props возвращаемого HOC(ом) компонента MakeCounter:
+
+```ts
+Subtract<P, InjectedCounterProps> & MakeCounterProps
+```
+
+Кроме этого, нет особых отличий от двух других типов рассмотренных выше, но данный пример показывает несколько проблем связанных с HOC(ами) в целом. Они не специфичны для TS, но их стоит разобрать для того, чтобы понять, как обходить их используя TS.
+
+Во-первых minValue и maxValue которые HOC не передает в оборачиваемый компонент. Вероятно, вам может понадобиться изменять поведение самого компонента в зависимости от значений props, например, скрывать кнопки.  Для этого вам необходимо изменить HOC, если этот HOC ваш - то вы просто измените его код, а если он взят из npm - то у вас появилась проблема. 
+
+Во-вторых, value prop добавляемый HOC(ом) имеет очень общее имя, если вы захотите использовать его для других целей или если вы пробрасываете props через несколько HOC(ов), то возможен конфликт имен. Вы можете изменить название,сделав его менее универсальным, но это не очень хорошее решение.
+
+recompose решает эту проблему, оно отлично подходит для JS, но с TS появляются проблемы, так как не получается правильно вывести типы. Если вы готовы использовать приведение типов - то это решение для вас.
+
+Моя рекомендация использовать для подобных кейсов render prop components, в следующей статье мы поговорим о том, как правильно типизировать и использовать данный патерн, сохраняя приемущества HOC.
+
+
